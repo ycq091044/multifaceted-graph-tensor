@@ -1,10 +1,11 @@
+# %% load packages
 import pickle
 import os
 import torch
 import torch.nn as nn
 
-# load data
-root = "data/"
+# %% load data
+root = "/home/chaoqiy2/data/MNIST/Spatio-temporal/"
 claim_tensor = torch.Tensor(
     pickle.load(open(os.path.join(root, "claim_tensor.pkl"), "rb"))
 )
@@ -23,18 +24,19 @@ vac_tensor = torch.Tensor(pickle.load(open(os.path.join(root, "vac_tensor.pkl"),
 
 feat_name = pickle.load(open(os.path.join(root, "feat_name.pkl"), "rb"))
 
-# combine data
+# %% combine data
+device = "cuda:0"
 demographs = county_tensor
 cty_day_feat = torch.cat(
     [claim_tensor, covid_tensor.unsqueeze(-1), hos_tensor, vac_tensor], dim=-1
-)
-graph1 = distance_mat
-graph2 = mob_mat
+).to(device)
+graph1 = distance_mat.to(device)
+graph2 = mob_mat.to(device)
 
 print(demographs.shape, cty_day_feat.shape, graph1.shape, graph2.shape)
 
 
-# build the graph tensor decomposition model
+# %% build the graph tensor decomposition model
 class GTD(nn.Module):
     def __init__(self, d1, d2, d3, R, alpha, beta):
         super(GTD, self).__init__()
@@ -50,14 +52,12 @@ class GTD(nn.Module):
         loss1 = torch.norm(rec_T - T, p="fro") ** 2
         loss2 = torch.trace(torch.einsum("ir,ij,jm->rm", self.A1, L1, self.A1))
         loss3 = torch.trace(torch.einsum("ir,ij,jm->rm", self.A1, L2, self.A1))
-        loss = loss1 + self.alpha * loss2 + self.beta * loss3
+        loss = loss1  # + self.alpha * loss2 + self.beta * loss3
         return loss
 
 
-# graph and tensor decomposition
-def graph_tensor_decomposition(
-    A1, A2, T, R=15, alpha=1e-1, beta=1e-1, normalized=False
-):
+# %% graph and tensor decomposition
+def graph_tensor_decomposition(A1, A2, T, R=15, alpha=0, beta=0, normalized=False):
     # get diagonal matrix
     D1 = A1.sum(axis=1)
     D2 = A2.sum(axis=1)
@@ -69,10 +69,16 @@ def graph_tensor_decomposition(
     else:
         L1 = torch.diag(D1) - A1
         L2 = torch.diag(D2) - A2
+    L1 = L1.to(device)
+    L2 = L2.to(device)
 
+    # init the model
     d1, d2, d3 = T.shape
     model = GTD(d1, d2, d3, R, alpha, beta)
+    model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-1)
+
+    # optimization
     for epoch in range(50):
         loss = model(L1, L2, T)
 
@@ -81,9 +87,12 @@ def graph_tensor_decomposition(
         loss.backward()
         optimizer.step()
 
-        print(loss.item())
+        print(f"--epoch: {epoch}--", loss.item())
 
 
+# %% run it
 graph_tensor_decomposition(
-    mob_mat, distance_mat, cty_day_feat, R=5, alpha=1e-1, beta=1e-1, normalized=False
+    mob_mat, distance_mat, cty_day_feat, R=15, alpha=1e-1, beta=1e-1, normalized=False
 )
+
+# %%
