@@ -163,7 +163,7 @@ if __name__ == "__main__":
     # https://docs.bokeh.org/en/latest/docs/reference/palettes.html
     color_mapper = LinearColorMapper(palette=palette, low=0, high=9)
     title = "County Demographics"
-    descip = "Color is coded by the principle tensor factor of the county demongraphics (populaiton, income, etc)."
+    descip = "Color is coded by the principle tensor factor of the county demongraphics (population, income, etc)."
     p_demo = draw_map(
         geosource,
         nan_geosource,
