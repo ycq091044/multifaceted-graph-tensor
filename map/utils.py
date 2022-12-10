@@ -27,30 +27,12 @@ def get_data():
         "county": [],
         "state": [],
         "fips": [],
-        "decomp": [],
-        "decomp2": [],
         "demo_score": [],
         "demo_num": [],
         # "vac_score_12": [],
         # "vac_num_12": [],
         # "vac_score_bst": [],
         # "vac_num_bst": [],
-        "cases": [],
-        "slider": [],
-        "cases_1": [],
-        "cases_2": [],
-        "cases_3": [],
-        "cases_4": [],
-        "mae": [],
-        "mape": [],
-        "ratio": [],
-        "margin": [],
-        "hos_nnt": [],
-        "death_nnt": [],
-        "cost": [],
-        "cases_file_location": [],
-        "ratio_file_location": [],
-        "sim_file_location": [],
     }
     df_dict.update({f"vac_score_12_{i}": [] for i in range(date)})
     df_dict.update({f"vac_num_12_{i}": [] for i in range(date)})
@@ -76,24 +58,6 @@ def get_data():
             df_dict["county"].append(cur_name[0])
             df_dict["state"].append(cur_name[1])
             df_dict["fips"].append(fips[i])
-            df_dict["decomp"].append(decomp[i, 0])
-            df_dict["decomp2"].append(decomp[i, 1])
-            df_dict["cases"].append(1)
-            df_dict["slider"].append(0)
-            df_dict["cases_1"].append(1)
-            df_dict["cases_2"].append(10)
-            df_dict["cases_3"].append(100)
-            df_dict["cases_4"].append(1000)
-            df_dict["mae"].append(0.5)
-            df_dict["mape"].append(0.5)
-            df_dict["ratio"].append(0.5)
-            df_dict["margin"].append(10)
-            df_dict["hos_nnt"].append(10)
-            df_dict["death_nnt"].append(10)
-            df_dict["cost"].append(10)
-            df_dict["cases_file_location"].append("png1")
-            df_dict["ratio_file_location"].append("png2")
-            df_dict["sim_file_location"].append("png3")
     df = pd.DataFrame(df_dict)
 
     # change into [0, infty)
@@ -189,39 +153,6 @@ def get_us_map(df, date):
         us_map[f"vac_label_bst_{j}"] = us_map[f"vac_num_bst_{j}"]
         us_map[f"vac_label_bst_{j}"] = us_map[f"vac_label_bst_{j}"].map("{:.0f}".format)
 
-    #####################
-    us_map["cases_label"] = us_map["cases"].round(0)
-    us_map["cases_label"] = us_map["cases_label"].map("{:,.0f}".format)
-
-    us_map["decomp_label"] = us_map["decomp"].map("{:,.2f}".format)
-    us_map["decomp2_label"] = us_map["decomp2"].map("{:,.2f}".format)
-
-    us_map["mae_label"] = us_map["mae"].round(1)
-    us_map["mae_label"] = us_map["mae_label"].map("{:,.1f}".format)
-
-    us_map["mape_label"] = us_map["mape"].round(2)
-    us_map.loc[us_map["mape_label"] == 0, "mape_label"] = np.nan
-    us_map["mape_label"] = us_map["mape_label"].map("{:,.2f}".format)
-
-    us_map["ratio_label"] = us_map["ratio"].round(4)
-
-    us_map["ratio_label"] = us_map["ratio_label"].map("{:,.4f}".format)
-
-    us_map["margin_label"] = us_map["margin"].round(0)
-    us_map.loc[us_map["margin_label"] > 100000, "margin_label"] = np.nan
-    us_map["margin_label"] = us_map["margin_label"].map("{:,.0f}".format)
-
-    us_map["hosnnt_label"] = us_map["hos_nnt"].round(0)
-    us_map.loc[us_map["hosnnt_label"] > 100000, "hosnnt_label"] = np.nan
-    us_map["hosnnt_label"] = us_map["hosnnt_label"].map("{:,.0f}".format)
-
-    us_map["deathnnt_label"] = us_map["death_nnt"].round(0)
-    us_map.loc[us_map["deathnnt_label"] > 100000, "deathnnt_label"] = np.nan
-    us_map["deathnnt_label"] = us_map["deathnnt_label"].map("{:,.0f}".format)
-
-    us_map["cost_label"] = us_map["cost"].round(2)
-    us_map["cost_label"] = us_map["cost_label"].map("{:,.2f}".format)
-
     return us_map, state_map, land_map, lake_map
 
 
@@ -240,6 +171,8 @@ def config_colorbar_range(us_map, date, state_map, land_map, lake_map):
             us_map[f"vac_score_12_{j}"], q_vac_12, labels=range(0, 10)
         )
         us_map[f"q_vac_12_{j}"].fillna(0, inplace=True)
+        # drop columns
+        us_map.drop(columns=[f"vac_num_12_{j}", f"vac_score_12_{j}"], inplace=True)
 
     MAX_vac_bst = max([us_map[f"vac_score_bst_{j}"].max() for j in range(date)])
     q_vac_bst = [np.round(item, 2) for item in np.linspace(0, MAX_vac_bst, 10)] + [
@@ -250,49 +183,14 @@ def config_colorbar_range(us_map, date, state_map, land_map, lake_map):
             us_map[f"vac_score_bst_{j}"], q_vac_bst, labels=range(0, 10)
         )
         us_map[f"q_vac_bst_{j}"].fillna(0, inplace=True)
-
-    ####################
-    q_cases = [0, 1, 5, 10, 100, 250, 500, 1000, 5000, 10000, np.inf]
-    us_map["q_cases"] = pd.cut(us_map["cases"], q_cases, labels=range(0, 10))
-    us_map["q_cases"].fillna(0, inplace=True)
-
-    q_ratio = [1e-4, 3e-4, 5e-4, 7e-4, 1e-3, 3e-3, 5e-3, 7e-3, 1e-2, 5e-2, 1e-1]
-    us_map["q_ratio"] = pd.cut(us_map["ratio"], q_ratio, labels=range(0, 10))
-    us_map["q_ratio"].fillna(0, inplace=True)
-
-    q_mape = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    us_map["q_mape"] = pd.cut(us_map["mape"], q_mape, labels=range(0, 10))
-    us_map["q_mape"].fillna(0, inplace=True)
-
-    q_margin = [np.inf, 100000, 50000, 10000, 5000, 1000, 500, 300, 100, 50, 10][::-1]
-    us_map["q_margin"] = pd.cut(us_map["margin"], q_margin, labels=range(0, 10))
-    us_map["q_margin"].fillna(0, inplace=True)
-
-    us_map["q_hosnnt"] = pd.cut(us_map["hos_nnt"], q_margin, labels=range(0, 10))
-    us_map["q_hosnnt"].fillna(0, inplace=True)
-
-    us_map["q_deathnnt"] = pd.cut(us_map["death_nnt"], q_margin, labels=range(0, 10))
-    us_map["q_deathnnt"].fillna(0, inplace=True)
-
-    q_cost = [0, 0.2, 0.4, 0.6, 0.8, 1, 10, 20, 30, 40, 80]
-    us_map["q_cost"] = pd.cut(us_map["cost"], q_cost, labels=range(0, 10))
-    us_map["q_cost"].fillna(0, inplace=True)
+        # drop columns
+        us_map.drop(columns=[f"vac_num_bst_{j}", f"vac_score_bst_{j}"], inplace=True)
 
     # figure 1
     us_map["demo_label"].replace("nan", "N/A", inplace=True)
     for j in range(date):
         us_map[f"vac_label_12_{j}"].replace("nan", "N/A", inplace=True)
         us_map[f"vac_label_bst_{j}"].replace("nan", "N/A", inplace=True)
-
-    #####################
-    us_map["cases_label"].replace("nan", "N/A", inplace=True)
-    us_map["mae_label"].replace("nan", "N/A", inplace=True)
-    us_map["ratio_label"].replace("nan", "N/A", inplace=True)
-    us_map["margin_label"].replace("nan", ">100,000", inplace=True)
-    us_map["deathnnt_label"].replace("nan", ">100,000", inplace=True)
-    us_map["hosnnt_label"].replace("nan", ">100,000", inplace=True)
-    us_map["cost_label"].replace("nan", "N/A", inplace=True)
-    us_map["mape_label"].replace("nan", "N/A", inplace=True)
 
     us_map = gpd.overlay(us_map, land_map, how="intersection")
     great_lakes = [
@@ -313,11 +211,6 @@ def config_colorbar_range(us_map, date, state_map, land_map, lake_map):
     return (
         us_map,
         state_map,
-        q_cases,
-        q_ratio,
-        q_mape,
-        q_margin,
-        q_cost,
         q_demo,
         q_vac_12,
         q_vac_bst,
