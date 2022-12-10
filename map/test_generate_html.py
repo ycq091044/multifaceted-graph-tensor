@@ -144,11 +144,6 @@ if __name__ == "__main__":
     (
         us_map,
         state_map,
-        q_cases,
-        q_ratio,
-        q_mape,
-        q_margin,
-        q_cost,
         q_demo,
         q_vac_12,
         q_vac_bst,
@@ -161,8 +156,8 @@ if __name__ == "__main__":
     nan_map = us_map[us_map["demo_label"] == "N/A"]
     notnan_map = us_map[us_map["demo_label"] != "N/A"]
 
-    geosource_demo = GeoJSONDataSource(geojson=notnan_map.to_json())
-    nan_geosource_demo = GeoJSONDataSource(geojson=nan_map.to_json())
+    geosource = GeoJSONDataSource(geojson=notnan_map.to_json())
+    nan_geosource = GeoJSONDataSource(geojson=nan_map.to_json())
     palette = brewer["RdBu"][10]
 
     # https://docs.bokeh.org/en/latest/docs/reference/palettes.html
@@ -170,8 +165,8 @@ if __name__ == "__main__":
     title = "County Demographics"
     descip = "Color is coded by the principle tensor factor of the county demongraphics (populaiton, income, etc)."
     p_demo = draw_map(
-        geosource_demo,
-        nan_geosource_demo,
+        geosource,
+        nan_geosource,
         q_demo,
         "q_demo",
         "Population",
@@ -181,12 +176,12 @@ if __name__ == "__main__":
     )
 
     """ Figure 2 """
-    state_geosource = GeoJSONDataSource(geojson=state_map.to_json())
-    nan_map = us_map[us_map["vac_label_12_0"] == "N/A"]
-    notnan_map = us_map[us_map["vac_label_12_0"] != "N/A"]
+    # state_geosource = GeoJSONDataSource(geojson=state_map.to_json())
+    # nan_map = us_map[us_map["vac_label_12_0"] == "N/A"]
+    # notnan_map = us_map[us_map["vac_label_12_0"] != "N/A"]
 
-    geosource_vac_12 = GeoJSONDataSource(geojson=notnan_map.to_json())
-    nan_geosource_vac_12 = GeoJSONDataSource(geojson=nan_map.to_json())
+    # geosource_vac_12 = GeoJSONDataSource(geojson=notnan_map.to_json())
+    # nan_geosource_vac_12 = GeoJSONDataSource(geojson=nan_map.to_json())
     palette = brewer["RdBu"][10]
 
     # https://docs.bokeh.org/en/latest/docs/reference/palettes.html
@@ -194,8 +189,8 @@ if __name__ == "__main__":
     title = "County Vaccinations of 1st and 2nd Shots"
     descip = "Color is aligned with the number of 1st/2nd shots."
     p_vac_12 = draw_map(
-        geosource_vac_12,
-        nan_geosource_vac_12,
+        geosource,
+        nan_geosource,
         q_vac_12,
         "q_vac_12_0",
         "1st/2nd Shots",
@@ -218,7 +213,7 @@ if __name__ == "__main__":
     )
     callback_vac_12 = CustomJS(
         args=dict(
-            source=geosource_vac_12,
+            source=geosource,
             slider=vac_12_slider,
             div=slider_name_vac_12,
             DATES=DATES,
@@ -247,12 +242,12 @@ if __name__ == "__main__":
     )
 
     """ Figure 3 """
-    state_geosource = GeoJSONDataSource(geojson=state_map.to_json())
-    nan_map = us_map[us_map["vac_label_bst_0"] == "N/A"]
-    notnan_map = us_map[us_map["vac_label_bst_0"] != "N/A"]
+    # state_geosource = GeoJSONDataSource(geojson=state_map.to_json())
+    # nan_map = us_map[us_map["vac_label_bst_0"] == "N/A"]
+    # notnan_map = us_map[us_map["vac_label_bst_0"] != "N/A"]
 
-    geosource_vac_bst = GeoJSONDataSource(geojson=notnan_map.to_json())
-    nan_geosource_vac_bst = GeoJSONDataSource(geojson=nan_map.to_json())
+    # geosource_vac_bst = GeoJSONDataSource(geojson=notnan_map.to_json())
+    # nan_geosource_vac_bst = GeoJSONDataSource(geojson=nan_map.to_json())
     palette = brewer["RdBu"][10]
 
     # https://docs.bokeh.org/en/latest/docs/reference/palettes.html
@@ -260,8 +255,8 @@ if __name__ == "__main__":
     title = "County Vaccinations of Booster Shots"
     descip = "Color is aligned with the number of booster shots."
     p_vac_bst = draw_map(
-        geosource_vac_bst,
-        nan_geosource_vac_bst,
+        geosource,
+        nan_geosource,
         q_vac_bst,
         "q_vac_bst_0",
         "Booster Shots",
@@ -284,7 +279,7 @@ if __name__ == "__main__":
     )
     callback_vac_bst = CustomJS(
         args=dict(
-            source=geosource_vac_bst,
+            source=geosource,
             slider=vac_bst_slider,
             div=slider_name_vac_bst,
             DATES=DATES,
