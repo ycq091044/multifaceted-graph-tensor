@@ -18,12 +18,23 @@ def get_data():
     fips = pickle.load(open(f"{root}/fips.pkl", "rb"))
     decomp = pickle.load(open(f"../decomp.pkl", "rb"))
 
+    # Figure 1 data
+    demo_score, demo_num = pickle.load(open(f"../demongraphs.pkl", "rb"))
+    vac_score, vac_12, vac_bst = pickle.load(open(f"../vaccine.pkl", "rb"))
+    date = len(vac_12)
+
     df_dict = {
         "county": [],
         "state": [],
         "fips": [],
         "decomp": [],
         "decomp2": [],
+        "demo_score": [],
+        "demo_num": [],
+        # "vac_score_12": [],
+        # "vac_num_12": [],
+        # "vac_score_bst": [],
+        # "vac_num_bst": [],
         "cases": [],
         "slider": [],
         "cases_1": [],
@@ -41,9 +52,27 @@ def get_data():
         "ratio_file_location": [],
         "sim_file_location": [],
     }
+    df_dict.update({f"vac_score_12_{i}": [] for i in range(date)})
+    df_dict.update({f"vac_num_12_{i}": [] for i in range(date)})
+    df_dict.update({f"vac_score_bst_{i}": [] for i in range(date)})
+    df_dict.update({f"vac_num_bst_{i}": [] for i in range(date)})
+
     for i in range(len(fips)):
         if fips[i] in fips2name:
             cur_name = fips2name[fips[i]].split(",")
+            # figure 1
+            df_dict["demo_score"].append(demo_score[i, 0])
+            df_dict["demo_num"].append(demo_num[i])
+            for j in range(date):
+                df_dict[f"vac_score_12_{j}"].append(vac_score[j][i, 0])
+                df_dict[f"vac_num_12_{j}"].append(vac_12[j][i])
+                df_dict[f"vac_score_bst_{j}"].append(vac_score[j][i, 1])
+                df_dict[f"vac_num_bst_{j}"].append(vac_bst[j][i])
+            # df_dict["vac_score_12"].append(vac_score[i, 0])
+            # df_dict["vac_num_12"].append(vac_12[i])
+            # df_dict["vac_score_bst"].append(vac_score[i, 1])
+            # df_dict["vac_num_bst"].append(vac_bst[i])
+            # others
             df_dict["county"].append(cur_name[0])
             df_dict["state"].append(cur_name[1])
             df_dict["fips"].append(fips[i])
@@ -66,113 +95,24 @@ def get_data():
             df_dict["ratio_file_location"].append("png2")
             df_dict["sim_file_location"].append("png3")
     df = pd.DataFrame(df_dict)
-    return df
+
+    # change into [0, infty)
+    df["demo_score"] = df["demo_score"].apply(lambda x: np.log(x))
+    df["demo_score"] = df["demo_score"] - df["demo_score"].min()
+    for j in range(date):
+        df[f"vac_score_12_{j}"] = df[f"vac_score_12_{j}"].apply(lambda x: np.log(x))
+        df[f"vac_score_12_{j}"] = (
+            df[f"vac_score_12_{j}"] - df[f"vac_score_12_{j}"].min()
+        ) / (df[f"vac_score_12_{j}"].max() - df[f"vac_score_12_{j}"].min() + 1e-8)
+
+        df[f"vac_score_bst_{j}"] = df[f"vac_score_bst_{j}"].apply(lambda x: np.log(x))
+        df[f"vac_score_bst_{j}"] = (
+            df[f"vac_score_bst_{j}"] - df[f"vac_score_bst_{j}"].min()
+        ) / (df[f"vac_score_bst_{j}"].max() - df[f"vac_score_bst_{j}"].min() + 1e-8)
+    return df, date
 
 
-def config_colorbar_range(us_map, state_map, land_map, lake_map):
-    q_decomp = [
-        -np.inf,
-        -323.7175900341559,
-        -61.94701358172966,
-        -11.854258854289872,
-        -2.26844653180864,
-        -0.43409286201199365,
-        -0.08306857562181706,
-        -0.015896112444451445,
-        -0.0030418998746590143,
-        -0.0005821019230791376,
-        -0.00011139178237758834,
-        -2.1316076599817513e-05,
-        0,
-    ]
-    us_map["q_decomp"] = pd.cut(us_map["decomp"], q_decomp, labels=range(0, 12))
-    us_map["q_decomp"].fillna(0, inplace=True)
-
-    q_decomp2 = [
-        0,
-        8.366516072160513e-06,
-        4.171941291326946e-05,
-        0.00020803255002531403,
-        0.0010373498906893798,
-        0.0051727149132769325,
-        0.025793602059426626,
-        0.1286190942965734,
-        0.641355611347234,
-        3.1981022915471025,
-        15.947249990865679,
-        79.52051192370948,
-        100,
-    ]
-    us_map["q_decomp2"] = pd.cut(us_map["decomp2"], q_decomp2, labels=range(0, 12))
-    us_map["q_decomp2"].fillna(0, inplace=True)
-
-    q_cases = [0, 1, 5, 10, 100, 250, 500, 1000, 5000, 10000, np.inf]
-    us_map["q_cases"] = pd.cut(us_map["cases"], q_cases, labels=range(0, 10))
-    us_map["q_cases"].fillna(0, inplace=True)
-
-    q_ratio = [1e-4, 3e-4, 5e-4, 7e-4, 1e-3, 3e-3, 5e-3, 7e-3, 1e-2, 5e-2, 1e-1]
-    us_map["q_ratio"] = pd.cut(us_map["ratio"], q_ratio, labels=range(0, 10))
-    us_map["q_ratio"].fillna(0, inplace=True)
-
-    q_mape = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    us_map["q_mape"] = pd.cut(us_map["mape"], q_mape, labels=range(0, 10))
-    us_map["q_mape"].fillna(0, inplace=True)
-
-    q_margin = [np.inf, 100000, 50000, 10000, 5000, 1000, 500, 300, 100, 50, 10][::-1]
-    us_map["q_margin"] = pd.cut(us_map["margin"], q_margin, labels=range(0, 10))
-    us_map["q_margin"].fillna(0, inplace=True)
-
-    us_map["q_hosnnt"] = pd.cut(us_map["hos_nnt"], q_margin, labels=range(0, 10))
-    us_map["q_hosnnt"].fillna(0, inplace=True)
-
-    us_map["q_deathnnt"] = pd.cut(us_map["death_nnt"], q_margin, labels=range(0, 10))
-    us_map["q_deathnnt"].fillna(0, inplace=True)
-
-    q_cost = [0, 0.2, 0.4, 0.6, 0.8, 1, 10, 20, 30, 40, 80]
-    us_map["q_cost"] = pd.cut(us_map["cost"], q_cost, labels=range(0, 10))
-    us_map["q_cost"].fillna(0, inplace=True)
-
-    us_map["decomp"].replace("nan", "N/A", inplace=True)
-    us_map["decomp2"].replace("nan", "N/A", inplace=True)
-    us_map["cases_label"].replace("nan", "N/A", inplace=True)
-    us_map["mae_label"].replace("nan", "N/A", inplace=True)
-    us_map["ratio_label"].replace("nan", "N/A", inplace=True)
-    us_map["margin_label"].replace("nan", ">100,000", inplace=True)
-    us_map["deathnnt_label"].replace("nan", ">100,000", inplace=True)
-    us_map["hosnnt_label"].replace("nan", ">100,000", inplace=True)
-    us_map["cost_label"].replace("nan", "N/A", inplace=True)
-    us_map["mape_label"].replace("nan", "N/A", inplace=True)
-
-    us_map = gpd.overlay(us_map, land_map, how="intersection")
-    great_lakes = [
-        "Lake Superior",
-        "Lake Michigan",
-        "Lake Erie",
-        "Lake Superior" "Lake Huron",
-    ]
-    us_map = gpd.overlay(
-        us_map, lake_map[lake_map.name.isin(great_lakes)], how="difference"
-    )
-    state_map = gpd.overlay(state_map, land_map, how="intersection")
-
-    state_map = gpd.overlay(
-        state_map, lake_map[lake_map.name.isin(great_lakes)], how="difference"
-    )
-
-    return (
-        us_map,
-        state_map,
-        q_decomp,
-        q_decomp2,
-        q_cases,
-        q_ratio,
-        q_mape,
-        q_margin,
-        q_cost,
-    )
-
-
-def get_us_map(df):
+def get_us_map(df, date):
     # TODO: what is this
     map_projection = "epsg:2163"
     cwd = os.getcwd()
@@ -240,6 +180,16 @@ def get_us_map(df):
     us_map["NAME"] = us_map["NAME"] + " County, " + us_map["STSPS"]
     us_map.set_index("STATEFP", inplace=True)
 
+    # figure 1
+    us_map["demo_label"] = us_map["demo_num"]
+    us_map["demo_label"] = us_map["demo_label"].map("{:.0f}".format)
+    for j in range(date):
+        us_map[f"vac_label_12_{j}"] = us_map[f"vac_num_12_{j}"]
+        us_map[f"vac_label_12_{j}"] = us_map[f"vac_label_12_{j}"].map("{:.0f}".format)
+        us_map[f"vac_label_bst_{j}"] = us_map[f"vac_num_bst_{j}"]
+        us_map[f"vac_label_bst_{j}"] = us_map[f"vac_label_bst_{j}"].map("{:.0f}".format)
+
+    #####################
     us_map["cases_label"] = us_map["cases"].round(0)
     us_map["cases_label"] = us_map["cases_label"].map("{:,.0f}".format)
 
@@ -273,6 +223,105 @@ def get_us_map(df):
     us_map["cost_label"] = us_map["cost_label"].map("{:,.2f}".format)
 
     return us_map, state_map, land_map, lake_map
+
+
+def config_colorbar_range(us_map, date, state_map, land_map, lake_map):
+    # figure 1
+    q_demo = [
+        np.round(item, 2) for item in np.linspace(0, us_map["demo_score"].max(), 10)
+    ] + [np.inf]
+    us_map["q_demo"] = pd.cut(us_map["demo_score"], q_demo, labels=range(0, 10))
+    us_map["q_demo"].fillna(0, inplace=True)
+
+    MAX_vac_12 = max([us_map[f"vac_score_12_{j}"].max() for j in range(date)])
+    q_vac_12 = [np.round(item, 2) for item in np.linspace(0, MAX_vac_12, 10)] + [np.inf]
+    for j in range(date):
+        us_map[f"q_vac_12_{j}"] = pd.cut(
+            us_map[f"vac_score_12_{j}"], q_vac_12, labels=range(0, 10)
+        )
+        us_map[f"q_vac_12_{j}"].fillna(0, inplace=True)
+
+    MAX_vac_bst = max([us_map[f"vac_score_bst_{j}"].max() for j in range(date)])
+    q_vac_bst = [np.round(item, 2) for item in np.linspace(0, MAX_vac_bst, 10)] + [
+        np.inf
+    ]
+    for j in range(date):
+        us_map[f"q_vac_bst_{j}"] = pd.cut(
+            us_map[f"vac_score_bst_{j}"], q_vac_bst, labels=range(0, 10)
+        )
+        us_map[f"q_vac_bst_{j}"].fillna(0, inplace=True)
+
+    ####################
+    q_cases = [0, 1, 5, 10, 100, 250, 500, 1000, 5000, 10000, np.inf]
+    us_map["q_cases"] = pd.cut(us_map["cases"], q_cases, labels=range(0, 10))
+    us_map["q_cases"].fillna(0, inplace=True)
+
+    q_ratio = [1e-4, 3e-4, 5e-4, 7e-4, 1e-3, 3e-3, 5e-3, 7e-3, 1e-2, 5e-2, 1e-1]
+    us_map["q_ratio"] = pd.cut(us_map["ratio"], q_ratio, labels=range(0, 10))
+    us_map["q_ratio"].fillna(0, inplace=True)
+
+    q_mape = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    us_map["q_mape"] = pd.cut(us_map["mape"], q_mape, labels=range(0, 10))
+    us_map["q_mape"].fillna(0, inplace=True)
+
+    q_margin = [np.inf, 100000, 50000, 10000, 5000, 1000, 500, 300, 100, 50, 10][::-1]
+    us_map["q_margin"] = pd.cut(us_map["margin"], q_margin, labels=range(0, 10))
+    us_map["q_margin"].fillna(0, inplace=True)
+
+    us_map["q_hosnnt"] = pd.cut(us_map["hos_nnt"], q_margin, labels=range(0, 10))
+    us_map["q_hosnnt"].fillna(0, inplace=True)
+
+    us_map["q_deathnnt"] = pd.cut(us_map["death_nnt"], q_margin, labels=range(0, 10))
+    us_map["q_deathnnt"].fillna(0, inplace=True)
+
+    q_cost = [0, 0.2, 0.4, 0.6, 0.8, 1, 10, 20, 30, 40, 80]
+    us_map["q_cost"] = pd.cut(us_map["cost"], q_cost, labels=range(0, 10))
+    us_map["q_cost"].fillna(0, inplace=True)
+
+    # figure 1
+    us_map["demo_label"].replace("nan", "N/A", inplace=True)
+    for j in range(date):
+        us_map[f"vac_label_12_{j}"].replace("nan", "N/A", inplace=True)
+        us_map[f"vac_label_bst_{j}"].replace("nan", "N/A", inplace=True)
+
+    #####################
+    us_map["cases_label"].replace("nan", "N/A", inplace=True)
+    us_map["mae_label"].replace("nan", "N/A", inplace=True)
+    us_map["ratio_label"].replace("nan", "N/A", inplace=True)
+    us_map["margin_label"].replace("nan", ">100,000", inplace=True)
+    us_map["deathnnt_label"].replace("nan", ">100,000", inplace=True)
+    us_map["hosnnt_label"].replace("nan", ">100,000", inplace=True)
+    us_map["cost_label"].replace("nan", "N/A", inplace=True)
+    us_map["mape_label"].replace("nan", "N/A", inplace=True)
+
+    us_map = gpd.overlay(us_map, land_map, how="intersection")
+    great_lakes = [
+        "Lake Superior",
+        "Lake Michigan",
+        "Lake Erie",
+        "Lake Superior" "Lake Huron",
+    ]
+    us_map = gpd.overlay(
+        us_map, lake_map[lake_map.name.isin(great_lakes)], how="difference"
+    )
+    state_map = gpd.overlay(state_map, land_map, how="intersection")
+
+    state_map = gpd.overlay(
+        state_map, lake_map[lake_map.name.isin(great_lakes)], how="difference"
+    )
+
+    return (
+        us_map,
+        state_map,
+        q_cases,
+        q_ratio,
+        q_mape,
+        q_margin,
+        q_cost,
+        q_demo,
+        q_vac_12,
+        q_vac_bst,
+    )
 
 
 def get_dist(lat1, lon1, lat2, lon2):
